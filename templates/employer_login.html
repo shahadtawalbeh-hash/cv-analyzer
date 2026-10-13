@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CV Fitboard - Employer Login</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/css/site.css" />
+  <style>
+    .auth-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: calc(100vh - 72px);
+      padding: 32px clamp(16px, 4vw, 40px);
+    }
+    .auth-card {
+      width: 100%;
+      max-width: 420px;
+      background: var(--bg);
+      border: 1px solid var(--line);
+      border-radius: calc(var(--radius) + 2px);
+      padding: 32px;
+      box-shadow: var(--shadow);
+    }
+    .auth-card h2 {
+      margin: 0 0 6px;
+      font-size: 1.5rem;
+      letter-spacing: -0.02em;
+    }
+    .auth-card .auth-sub {
+      color: var(--muted);
+      font-size: 0.95rem;
+      margin: 0 0 24px;
+    }
+    .auth-footer {
+      margin-top: 18px;
+      font-size: 0.9rem;
+      color: var(--muted);
+      text-align: center;
+    }
+    .auth-footer a {
+      color: var(--accent);
+      font-weight: 600;
+      text-decoration: none;
+    }
+    .demo-hint {
+      margin-top: 20px;
+      padding: 12px 14px;
+      background: var(--bg-soft);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      font-size: 0.88rem;
+      color: var(--muted);
+    }
+    .demo-hint strong {
+      display: block;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar reveal">
+    <div class="brand">
+      <div>
+        <div class="brand-title">CV Fitboard</div>
+        <div class="brand-sub">Employer Portal</div>
+      </div>
+    </div>
+    <a class="btn ghost" href="/">Main site</a>
+  </header>
+
+  <div class="auth-wrap">
+    <div class="auth-card reveal">
+      <h2>Employer login</h2>
+      <p class="auth-sub">Sign in to manage your postings and review candidates.</p>
+
+      {% if error %}
+      <p class="warn">{{ error }}</p>
+      {% endif %}
+
+      <form method="post" action="/employer/login" class="stack">
+        <label class="field">
+          <span>Email</span>
+          <input type="email" name="email" placeholder="you@company.com" required autocomplete="email" />
+        </label>
+        <label class="field">
+          <span>Password</span>
+          <input type="password" name="password" placeholder="Password" required autocomplete="current-password" />
+        </label>
+        <button class="btn primary wide" type="submit">Sign in</button>
+      </form>
+
+      <p class="auth-footer">No account? <a href="/employer/register">Create one</a></p>
+
+      <div class="demo-hint">
+        <strong>Demo credentials</strong>
+        Email: employer@demo.com<br />
+        Password: employer123
+      </div>
+    </div>
+  </div>
+</body>
+</html>

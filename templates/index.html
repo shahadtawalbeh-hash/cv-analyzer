@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CV Fitboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/css/site.css" />
+</head>
+<body>
+  <header class="topbar reveal">
+    <div class="brand">
+      <div>
+        <div class="brand-title">CV Fitboard</div>
+        <div class="brand-sub">Compare one CV to the roles on this page.</div>
+      </div>
+    </div>
+    <div style="display:flex; gap:10px; align-items:center;">
+      <a class="btn ghost" href="/employer/login" style="font-size:0.9rem;">Employer portal</a>
+      <div class="pill {% if has_key %}pill-ok{% else %}pill-warn{% endif %}" id="key-pill">
+        {% if has_key %}Key ok{% else %}Need key{% endif %}
+      </div>
+    </div>
+  </header>
+
+  <main class="shell">
+    <section class="hero {% if illustrations %}grid-two{% endif %} reveal">
+      <div class="hero-copy">
+        <h1>Upload a PDF and compare it to the roles below.</h1>
+        <p class="lede">
+          {{ threshold }}% or above is OK to refer. Under that we suggest a few short courses.
+        </p>
+        <div class="hero-actions">
+          <a class="btn ghost" href="#board">Jobs</a>
+          <a class="btn primary" href="#key">Key</a>
+        </div>
+        <div class="hero-stats">
+          <div class="stat">
+            <div class="stat-value">{{ threshold }}%</div>
+            <div class="stat-label">Refer bar</div>
+          </div>
+          <div class="stat">
+            <div class="stat-value">{{ jobs|length }}</div>
+            <div class="stat-label">Roles listed</div>
+          </div>
+        </div>
+      </div>
+      {% if illustrations %}
+      <div class="hero-art" aria-hidden="true">
+        {% for src in illustrations[:4] %}
+        <img class="hero-img img-{{ loop.index }}" src="{{ src }}" alt="" loading="lazy" />
+        {% endfor %}
+      </div>
+      {% endif %}
+    </section>
+
+    <section class="panel reveal" id="key">
+      <div class="panel-head">
+        <h2>OpenAI key</h2>
+        <p>Optional: paste a different key for this browser. A default is already configured.</p>
+      </div>
+      <form class="row" id="key-form" autocomplete="off">
+        <label class="field">
+          <span>Key</span>
+          <input name="api_key" type="password" placeholder="sk-..." required />
+        </label>
+        <button class="btn primary" type="submit">Save</button>
+      </form>
+      <p class="hint" id="key-msg"></p>
+      {% if has_key %}
+      <form class="inline-form" method="post" action="/actions/logout">
+        <button class="btn ghost" type="submit">Clear key</button>
+      </form>
+      {% endif %}
+    </section>
+
+    <section class="panel reveal" id="analyze">
+      <div class="panel-head">
+        <h2>PDF</h2>
+        <p>Real PDFs only.</p>
+      </div>
+      <form id="cv-form" class="stack">
+        <label class="dropzone {% if not has_key %}disabled{% endif %}" id="dropzone">
+          <input id="cv-file-input" name="cv_file" type="file" accept=".pdf,application/pdf" {% if not has_key %}disabled{% endif %} required />
+          <div class="dropzone-inner">
+            <strong>PDF here</strong>
+            <span>click or drop</span>
+            <span class="cv-picked" id="cv-filename" hidden></span>
+          </div>
+        </label>
+        <button class="btn primary wide" type="submit" {% if not has_key %}disabled{% endif %} id="run-btn">
+          Go
+        </button>
+        <p class="hint subtle" id="run-hint">Picking a file runs it if the key is saved.</p>
+        {% if not has_key %}
+        <p class="warn">Add a key first.</p>
+        {% endif %}
+      </form>
+      <p class="hint" id="run-msg"></p>
+    </section>
+
+    <section class="panel reveal" id="history">
+      <div class="panel-head">
+        <h2>Past runs</h2>
+        <p>Stored on this PC in the app database. Click load to see it again.</p>
+      </div>
+      {% if recent_runs %}
+      <div class="table-wrap">
+        <table class="board-table history-table">
+          <thead>
+            <tr>
+              <th>When</th>
+              <th>File</th>
+              <th>High score</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for run in recent_runs %}
+            <tr>
+              <td>{{ run.when }}</td>
+              <td>{{ run.filename }}</td>
+              <td>{{ run.top_score }}%</td>
+              <td><button type="button" class="btn ghost btn-sm load-run" data-id="{{ run.id }}">Load</button></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="hint">No runs yet.</p>
+      {% endif %}
+    </section>
+
+    <section class="panel reveal results" id="results" hidden>
+      <div class="panel-head">
+        <h2>Results</h2>
+        <p id="results-lead"></p>
+      </div>
+      <div class="card email-card" id="email-card">
+        <h3>Email this run</h3>
+        <p class="hint subtle">Uses your own mail app. Nothing is sent through our server.</p>
+        <form class="row email-row" id="email-form">
+          <label class="field">
+            <span>To</span>
+            <input name="to_email" id="email-to" type="email" placeholder="name@gmail.com" required />
+          </label>
+          <button class="btn primary" type="submit">Open mail and copy report</button>
+        </form>
+        <p class="hint" id="email-msg"></p>
+      </div>
+      <div class="card preview-block" id="preview-card" hidden>
+        <h3>Text pulled from PDF</h3>
+        <p class="hint subtle">If this is wrong, fix the PDF and upload again.</p>
+        <pre class="preview-pre" id="extracted-preview"></pre>
+      </div>
+      <div class="grid-two">
+        <div class="card">
+          <h3>Summary</h3>
+          <div id="profile-box" class="json-view"></div>
+        </div>
+        <div class="card">
+          <h3>Per job</h3>
+          <div id="match-wrap"></div>
+        </div>
+      </div>
+      <div class="card training">
+        <h3>Courses when under {{ threshold }}%</h3>
+        <div id="training-wrap"></div>
+      </div>
+    </section>
+
+    <section class="panel reveal" id="board">
+      <div class="panel-head">
+        <h2>Jobs</h2>
+      </div>
+      <div class="table-wrap">
+        <table class="board-table">
+          <thead>
+            <tr>
+              <th>Role</th>
+              <th>Area</th>
+              <th>Note</th>
+              <th>Ask</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for job in jobs %}
+            <tr>
+              <td><strong>{{ job.title }}</strong></td>
+              <td><span class="tag">{{ job.category }}</span></td>
+              <td>{{ job.company }}</td>
+              <td>{{ job.requirements }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    window.__HAS_KEY__ = {% if has_key %}true{% else %}false{% endif %};
+  </script>
+  <script src="/static/js/app.js"></script>
+</body>
+</html>

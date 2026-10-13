@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CV Fitboard - Candidates</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/css/site.css" />
+  <style>
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--muted);
+      font-size: 0.9rem;
+      text-decoration: none;
+      font-weight: 500;
+    }
+    .back-link:hover { color: var(--text); }
+    .req-block {
+      margin-top: 10px;
+      padding: 12px 14px;
+      background: var(--bg-soft);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      font-size: 0.92rem;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+    .shortlist-btn {
+      padding: 6px 14px;
+      border-radius: 999px;
+      border: 1px solid var(--line-strong);
+      background: var(--bg);
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+      white-space: nowrap;
+    }
+    .shortlist-btn.active {
+      border-color: #6ee7b7;
+      background: var(--ok-bg);
+      color: var(--ok);
+    }
+    .shortlist-btn:hover:not(.active) {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .empty-state {
+      padding: 40px 20px;
+      text-align: center;
+      color: var(--muted);
+    }
+    .empty-state p { margin: 0; font-size: 0.95rem; }
+  </style>
+</head>
+<body>
+  <header class="topbar reveal">
+    <div class="brand">
+      <div>
+        <div class="brand-title">CV Fitboard</div>
+        <div class="brand-sub">{{ employer.name }}</div>
+      </div>
+    </div>
+    <div style="display:flex; gap:10px; align-items:center;">
+      <a class="btn ghost" href="/employer/dashboard">Dashboard</a>
+      <form method="post" action="/employer/logout" style="display:inline;">
+        <button class="btn ghost" type="submit">Sign out</button>
+      </form>
+    </div>
+  </header>
+
+  <main class="shell">
+
+    <div class="reveal" style="display:flex; flex-direction:column; gap:6px;">
+      <a class="back-link" href="/employer/dashboard">
+        &larr; Back to dashboard
+      </a>
+    </div>
+
+    <section class="panel reveal">
+      <div class="panel-head">
+        <h2>{{ job.title }}</h2>
+        <p>
+          <span class="tag">{{ category.name if category else "" }}</span>
+          &nbsp; Pass bar: {{ threshold }}% or above is qualified.
+        </p>
+      </div>
+      <div class="req-block">{{ job.requirements }}</div>
+    </section>
+
+    <section class="panel reveal">
+      <div class="panel-head">
+        <h2>Candidates</h2>
+        <p>
+          CVs uploaded to the platform, ranked by their match score for this role.
+          Shortlist candidates you want to follow up with.
+        </p>
+      </div>
+
+      {% if candidates %}
+      <div class="table-wrap">
+        <table class="board-table" id="candidates-table">
+          <thead>
+            <tr>
+              <th>File</th>
+              <th>Date</th>
+              <th>Score</th>
+              <th>Summary</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for c in candidates %}
+            <tr>
+              <td style="white-space:nowrap;">{{ c.filename }}</td>
+              <td style="white-space:nowrap; color:var(--muted);">{{ c.when }}</td>
+              <td style="white-space:nowrap;">
+                <span class="score {% if c.ready %}ok{% else %}low{% endif %}">
+                  {{ c.score }}%
+                </span>
+              </td>
+              <td style="max-width:320px; font-size:0.9rem; color:var(--muted);">{{ c.summary }}</td>
+              <td style="white-space:nowrap;">
+                <button
+                  class="shortlist-btn {% if c.shortlisted %}active{% endif %}"
+                  data-run-id="{{ c.run_id }}"
+                  data-job-id="{{ job.id }}"
+                  type="button"
+                >
+                  {% if c.shortlisted %}Shortlisted{% else %}Shortlist{% endif %}
+                </button>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <p class="hint" style="margin-top:10px;">
+        {{ candidates|length }} candidate{{ "s" if candidates|length != 1 else "" }} found.
+        {{ candidates|selectattr("ready")|list|length }} at or above the {{ threshold }}% bar.
+      </p>
+      {% else %}
+      <div class="empty-state">
+        <p>No CVs have been scored against this job yet.</p>
+        <p class="hint" style="margin-top:6px;">
+          CVs uploaded from the <a href="/" style="color:var(--accent);">main page</a> will appear here after analysis.
+        </p>
+      </div>
+      {% endif %}
+    </section>
+
+  </main>
+
+  <script>
+    document.querySelectorAll(".shortlist-btn").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const runId = btn.getAttribute("data-run-id");
+        const jobId = btn.getAttribute("data-job-id");
+        btn.disabled = true;
+        try {
+          const res = await fetch(
+            `/employer/jobs/${jobId}/candidates/${runId}/shortlist`,
+            { method: "POST", credentials: "same-origin" }
+          );
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(data.detail || "Failed");
+          if (data.shortlisted) {
+            btn.textContent = "Shortlisted";
+            btn.classList.add("active");
+          } else {
+            btn.textContent = "Shortlist";
+            btn.classList.remove("active");
+          }
+        } catch (err) {
+          btn.textContent = "Error";
+        } finally {
+          btn.disabled = false;
+        }
+      });
+    });
+  </script>
+</body>
+</html>

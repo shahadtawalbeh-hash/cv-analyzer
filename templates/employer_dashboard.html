@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CV Fitboard - Employer Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/css/site.css" />
+  <style>
+    .form-panel {
+      display: none;
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid var(--line);
+    }
+    .form-panel.open {
+      display: block;
+    }
+    .panel-head-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .delete-form {
+      display: inline;
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar reveal">
+    <div class="brand">
+      <div>
+        <div class="brand-title">CV Fitboard</div>
+        <div class="brand-sub">{{ employer.name }}</div>
+      </div>
+    </div>
+    <div style="display:flex; gap:10px; align-items:center;">
+      <a class="btn ghost" href="/">Main site</a>
+      <form method="post" action="/employer/logout" style="display:inline;">
+        <button class="btn ghost" type="submit">Sign out</button>
+      </form>
+    </div>
+  </header>
+
+  <main class="shell">
+
+    <section class="hero reveal">
+      <div class="hero-copy">
+        <h1>Your job postings</h1>
+        <p class="lede">Post openings and review candidates from uploaded CVs.</p>
+        <div class="hero-stats">
+          <div class="stat">
+            <div class="stat-value">{{ jobs|length }}</div>
+            <div class="stat-label">Active postings</div>
+          </div>
+          <div class="stat">
+            <div class="stat-value">{{ total_qualified }}</div>
+            <div class="stat-label">Qualified candidates</div>
+          </div>
+          <div class="stat">
+            <div class="stat-value">{{ total_shortlisted }}</div>
+            <div class="stat-label">Shortlisted</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel reveal">
+      <div class="panel-head-row">
+        <div class="panel-head" style="margin:0;">
+          <h2>Post a job</h2>
+          <p>Add a new opening. Candidates who upload CVs will be scored against it.</p>
+        </div>
+        <button class="btn primary" id="toggle-btn" type="button">New posting</button>
+      </div>
+
+      <div class="form-panel" id="post-form-wrap">
+        <form method="post" action="/employer/jobs/new" class="stack">
+          <div class="row">
+            <label class="field">
+              <span>Job title</span>
+              <input type="text" name="title" placeholder="e.g. Backend Engineer" required />
+            </label>
+            <label class="field">
+              <span>Category</span>
+              <select name="category_id" required>
+                <option value="">Select a category...</option>
+                {% for cat in categories %}
+                <option value="{{ cat.id }}">{{ cat.name }}</option>
+                {% endfor %}
+              </select>
+            </label>
+          </div>
+          <label class="field">
+            <span>Requirements</span>
+            <textarea name="requirements" placeholder="Describe the skills, experience, and qualifications required for this role..." required></textarea>
+          </label>
+          <div style="display:flex; gap:10px;">
+            <button class="btn primary" type="submit">Post job</button>
+            <button class="btn ghost" type="button" id="cancel-btn">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <section class="panel reveal">
+      <div class="panel-head">
+        <h2>Postings</h2>
+        <p>Click "View candidates" to see scored CVs for a role.</p>
+      </div>
+
+      {% if jobs %}
+      <div class="table-wrap">
+        <table class="board-table">
+          <thead>
+            <tr>
+              <th>Title</th>
+              <th>Category</th>
+              <th>Qualified CVs</th>
+              <th>Shortlisted</th>
+              <th></th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for job in jobs %}
+            <tr>
+              <td><strong>{{ job.title }}</strong></td>
+              <td><span class="tag">{{ job.category }}</span></td>
+              <td>
+                {% if job.qualified > 0 %}
+                <span class="score ok">{{ job.qualified }}</span>
+                {% else %}
+                <span style="color:var(--faint);">0</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if job.shortlisted > 0 %}
+                <span class="score ok">{{ job.shortlisted }}</span>
+                {% else %}
+                <span style="color:var(--faint);">0</span>
+                {% endif %}
+              </td>
+              <td>
+                <a class="btn ghost btn-sm" href="/employer/jobs/{{ job.id }}/candidates">View candidates</a>
+              </td>
+              <td>
+                <form method="post" action="/employer/jobs/{{ job.id }}/delete" class="delete-form"
+                  onsubmit="return confirm('Remove this posting?')">
+                  <button class="btn ghost btn-sm" type="submit" style="color:var(--warn-text);">Remove</button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="hint" style="margin-top:14px;">No postings yet. Use "New posting" above to add one.</p>
+      {% endif %}
+    </section>
+
+  </main>
+
+  <script>
+    const toggleBtn = document.getElementById("toggle-btn");
+    const formWrap = document.getElementById("post-form-wrap");
+    const cancelBtn = document.getElementById("cancel-btn");
+
+    toggleBtn.addEventListener("click", () => {
+      const open = formWrap.classList.toggle("open");
+      toggleBtn.textContent = open ? "Close" : "New posting";
+    });
+
+    cancelBtn.addEventListener("click", () => {
+      formWrap.classList.remove("open");
+      toggleBtn.textContent = "New posting";
+    });
+  </script>
+</body>
+</html>
